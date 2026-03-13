@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Asistente WhatsApp — Peluquería</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .wrapper {
+    width: 100%;
+    max-width: 440px;
+  }
+
+  /* Config panel */
+  .config-panel {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    border: 1px solid #e0e0e0;
+  }
+  .config-panel h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .config-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .config-group {
+    flex: 1;
+    min-width: 120px;
+  }
+  .config-group label {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+  .config-group input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #111;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .config-group input:focus { border-color: #1D9E75; }
+
+  .api-group {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .api-group .config-group { flex: 1; }
+  .apply-btn {
+    padding: 7px 14px;
+    background: #1D9E75;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s;
+  }
+  .apply-btn:hover { background: #0F6E56; }
+
+  /* Phone frame */
+  .phone-frame {
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid #d0d0d0;
+  }
+
+  /* WhatsApp header */
+  .wa-header {
+    background: #1D9E75;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .wa-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: #5DCAA5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+    color: #04342C;
+    flex-shrink: 0;
+  }
+  .wa-info { flex: 1; }
+  .wa-name { font-size: 15px; font-weight: 600; color: #fff; }
+  .wa-status { font-size: 11px; color: #b2dfdb; margin-top: 1px; }
+  .wa-dots { display: flex; gap: 3px; align-items: center; opacity: .8; }
+  .wa-dots span { width: 4px; height: 4px; border-radius: 50%; background: #fff; }
+
+  /* Chat body */
+  .wa-body {
+    background: #ece5dd url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E");
+    min-height: 380px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    scroll-behavior: smooth;
+  }
+  .wa-body::-webkit-scrollbar { width: 4px; }
+  .wa-body::-webkit-scrollbar-thumb { background: #bbb; border-radius: 2px; }
+
+  .msg {
+    max-width: 78%;
+    padding: 8px 10px 4px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #111;
+    position: relative;
+  }
+  .msg-in {
+    background: #fff;
+    border-radius: 2px 10px 10px 10px;
+    align-self: flex-start;
+  }
+  .msg-out {
+    background: #dcf8c6;
+    border-radius: 10px 2px 10px 10px;
+    align-self: flex-end;
+  }
+  .msg-time {
+    font-size: 10px;
+    color: #999;
+    text-align: right;
+    margin-top: 3px;
+  }
+  .msg-out .msg-time { color: #7a9e7a; }
+
+  /* Typing indicator */
+  .typing-bubble {
+    background: #fff;
+    border-radius: 2px 10px 10px 10px;
+    padding: 10px 14px;
+    align-self: flex-start;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .typing-bubble .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #aaa;
+    animation: typingBounce 1s infinite;
+  }
+  .typing-bubble .dot:nth-child(2) { animation-delay: .15s; }
+  .typing-bubble .dot:nth-child(3) { animation-delay: .3s; }
+  @keyframes typingBounce {
+    0%,60%,100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+  }
+
+  /* Date divider */
+  .date-divider {
+    text-align: center;
+    font-size: 11px;
+    color: #888;
+    background: rgba(255,255,255,.65);
+    border-radius: 8px;
+    padding: 3px 10px;
+    align-self: center;
+    margin: 4px 0;
+  }
+
+  /* Input row */
+  .wa-input-row {
+    background: #f0f0f0;
+    padding: 8px 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border-top: 1px solid #e0e0e0;
+  }
+  .wa-input {
+    flex: 1;
+    border: none;
+    background: #fff;
+    border-radius: 20px;
+    padding: 9px 14px;
+    font-size: 14px;
+    color: #111;
+    outline: none;
+  }
+  .wa-input::placeholder { color: #aaa; }
+  .wa-send-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #1D9E75;
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background .15s, transform .1s;
+  }
+  .wa-send-btn:hover { background: #0F6E56; }
+  .wa-send-btn:active { transform: scale(.93); }
+  .wa-send-btn svg { width: 18px; height: 18px; fill: #fff; }
+
+  /* Quick reply buttons */
+  .quick-section {
+    background: #fff;
+    padding: 10px;
+    border-top: 1px solid #eee;
+  }
+  .quick-label {
+    font-size: 10px;
+    color: #aaa;
+    margin-bottom: 7px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .quick-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .qbtn {
+    font-size: 12px;
+    padding: 5px 11px;
+    border-radius: 14px;
+    border: 1px solid #ddd;
+    background: #fafafa;
+    color: #444;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .qbtn:hover {
+    background: #e8f5e9;
+    border-color: #1D9E75;
+    color: #0F6E56;
+  }
+
+  /* Status + event log */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 4px 2px;
+    font-size: 11px;
+    color: #888;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #1D9E75;
+    transition: background .3s;
+    flex-shrink: 0;
+  }
+  .status-dot.thinking { background: #EF9F27; }
+  .status-dot.error { background: #E24B4A; }
+
+  .event-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 10px;
+    margin-top: 4px;
+  }
+  .badge-cita { background: #E1F5EE; color: #085041; }
+  .badge-cancel { background: #FCEBEB; color: #791F1F; }
+  .badge-escalado { background: #FAEEDA; color: #633806; }
+
+  /* Reset */
+  .reset-btn {
+    font-size: 11px;
+    color: #aaa;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 0;
+    text-decoration: underline;
+    display: block;
+    margin-top: 6px;
+  }
+  .reset-btn:hover { color: #E24B4A; }
+
+  /* API key warning */
+  .api-warning {
+    background: #FFF3CD;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #856404;
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+  .api-warning a { color: #856404; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="api-warning" id="api-warning">
+    Para que la IA funcione, necesitas una <strong>API Key de Anthropic</strong>.
+    Consíguela gratis en <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> e introdúcela abajo.
+  </div>
+
+  <div class="config-panel">
+    <h2>Configuración de la demo</h2>
+    <div class="config-row">
+      <div class="config-group">
+        <label>Nombre de la peluquería</label>
+        <input type="text" id="salon-name" value="Peluquería Carmen" placeholder="Nombre del negocio">
+      </div>
+      <div class="config-group">
+        <label>Nombre de la dueña</label>
+        <input type="text" id="owner-name" value="Carmen" placeholder="Nombre">
+      </div>
+    </div>
+    <div class="api-group">
+      <div class="config-group">
+        <label>API Key de Anthropic</label>
+        <input type="password" id="api-key" placeholder="sk-ant-api03-...">
+      </div>
+      <button class="apply-btn" onclick="applyConfig()">Aplicar</button>
+    </div>
+  </div>
+
+  <div class="phone-frame">
+    <div class="wa-header">
+      <div class="wa-avatar" id="avatar-initials">PC</div>
+      <div class="wa-info">
+        <div class="wa-name" id="header-name">Peluquería Carmen</div>
+        <div class="wa-status" id="header-status">en línea</div>
+      </div>
+      <div class="wa-dots"><span></span><span></span><span></span></div>
+    </div>
+
+    <div class="wa-body" id="chat-body">
+      <div class="date-divider">Hoy</div>
+      <div class="msg msg-in">
+        ¡Hola! Soy el asistente virtual de <span class="salon-ref">Peluquería Carmen</span>. ¿En qué te puedo ayudar? 😊
+        <div class="msg-time" id="init-time"></div>
+      </div>
+    </div>
+
+    <div class="wa-input-row">
+      <input class="wa-input" id="user-input" placeholder="Escribe un mensaje..." maxlength="300">
+      <button class="wa-send-btn" id="send-btn" onclick="sendMsg()">
+        <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
+
+    <div class="quick-section">
+      <div class="quick-label">Mensajes de prueba</div>
+      <div class="quick-btns">
+        <button class="qbtn" onclick="setInput('Hola, quiero pedir cita para un corte de pelo')">Reservar cita</button>
+        <button class="qbtn" onclick="setInput('¿Cuánto cuesta un tinte completo?')">Ver precios</button>
+        <button class="qbtn" onclick="setInput('Quiero cancelar mi cita del jueves a las 11')">Cancelar cita</button>
+        <button class="qbtn" onclick="setInput('¿Qué horario tenéis?')">Horario</button>
+        <button class="qbtn" onclick="setInput('Ayer me dejasteis el pelo fatal, quiero una solución')">Poner queja</button>
+        <button class="qbtn" onclick="setInput('¿Hacéis extensiones de pelo?')">Servicio raro</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Introduce tu API Key y pulsa Aplicar para activar la IA</span>
+  </div>
+  <div id="event-log" style="min-height:22px;"></div>
+  <button class="reset-btn" onclick="resetChat()">Reiniciar conversación</button>
+
+</div>
+
+<script>
+  const SYSTEM_TEMPLATE = `Eres el asistente virtual de {{SALON}}. Te llamas igual que la dueña o simplemente "el asistente".
+Respondes SIEMPRE en español, con mensajes cortos y naturales como WhatsApp real. Sin listas ni asteriscos.
+Sé cálida, cercana y profesional.
+
+SERVICIOS Y PRECIOS:
+- Corte de pelo: 30 min — 15€
+- Tinte completo: 90 min — 45€
+- Mechas: 120 min — 55€
+- Manicura: 45 min — 20€
+- Tratamiento keratina: 150 min — 70€
+
+HORARIO: Lunes a sábado de 9:00 a 20:00h. Cerrado domingos y festivos.
+
+NORMAS:
+- Citas con mínimo 2h de antelación.
+- Cancelaciones con 24h de antelación.
+- Retrasos de más de 10 min pueden perder la cita.
+
+GESTIÓN DE CITAS:
+Para reservar: pregunta qué servicio quiere, día y hora. Simula consultar disponibilidad y confirma con un resumen (servicio, día, hora). Añade [CITA_CONFIRMADA] al final de tu respuesta.
+Para cancelar: confirma los datos y cancela. Añade [CITA_CANCELADA] al final.
+
+ESCALADO: Si hay queja, problema con cita pasada, piden descuento o algo fuera de tus capacidades, responde con empatía y di que {{OWNER}} les contactará en breve. Añade [ESCALADO] al final.
+
+LÍMITES ABSOLUTOS:
+- No hagas descuentos ni inventes precios.
+- No confirmes cita sin dar un resumen completo.
+- Si preguntan si eres IA, sé honesta: "Soy un asistente virtual, pero {{OWNER}} también está disponible si lo prefieres."
+- No respondas temas ajenos a la peluquería.`;
+
+  let history = [];
+  let apiKey = '';
+  let salonName = 'Peluquería Carmen';
+  let ownerName = 'Carmen';
+  let busy = false;
+
+  // Init time
+  document.getElementById('init-time').textContent = getTime();
+
+  function getTime() {
+    return new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  }
+
+  function getInitials(name) {
+    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  function applyConfig() {
+    salonName = document.getElementById('salon-name').value.trim() || 'Peluquería Carmen';
+    ownerName = document.getElementById('owner-name').value.trim() || 'Carmen';
+    apiKey    = document.getElementById('api-key').value.trim();
+
+    document.getElementById('header-name').textContent = salonName;
+    document.getElementById('avatar-initials').textContent = getInitials(salonName);
+    document.querySelectorAll('.salon-ref').forEach(el => el.textContent = salonName);
+
+    if (apiKey) {
+      document.getElementById('api-warning').style.display = 'none';
+      setStatus('IA activa — escribe o usa los atajos', false);
+    } else {
+      setStatus('Introduce tu API Key para activar la IA', false);
+    }
+  }
+
+  function setInput(text) {
+    document.getElementById('user-input').value = text;
+    document.getElementById('user-input').focus();
+  }
+
+  function setStatus(text, thinking, error) {
+    document.getElementById('status-text').textContent = text;
+    const dot = document.getElementById('status-dot');
+    dot.className = 'status-dot' + (thinking ? ' thinking' : error ? ' error' : '');
+    document.getElementById('header-status').textContent = thinking ? 'escribiendo...' : 'en línea';
+  }
+
+  function addMsg(text, isOut) {
+    const body = document.getElementById('chat-body');
+    const clean = text.replace(/\[CITA_CONFIRMADA\]|\[CITA_CANCELADA\]|\[ESCALADO\]/g, '').trim();
+    const div = document.createElement('div');
+    div.className = 'msg ' + (isOut ? 'msg-out' : 'msg-in');
+    div.innerHTML = escapeHtml(clean).replace(/\n/g, '<br>') + '<div class="msg-time">' + getTime() + '</div>';
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function showTyping() {
+    const body = document.getElementById('chat-body');
+    const div = document.createElement('div');
+    div.className = 'typing-bubble';
+    div.id = 'typing-indicator';
+    div.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+  }
+
+  function logEvent(text, type) {
+    const log = document.getElementById('event-log');
+    log.innerHTML = '<span class="event-badge ' + type + '">' + text + '</span>';
+  }
+
+  async function sendMsg() {
+    if (busy) return;
+    if (!apiKey) {
+      setStatus('Introduce tu API Key primero', false, true);
+      return;
+    }
+    const input = document.getElementById('user-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    addMsg(text, true);
+    history.push({ role: 'user', content: text });
+
+    busy = true;
+    setStatus('Escribiendo...', true);
+    showTyping();
+
+    document.getElementById('event-log').innerHTML = '';
+
+    const systemPrompt = SYSTEM_TEMPLATE
+      .replace(/{{SALON}}/g, salonName)
+      .replace(/{{OWNER}}/g, ownerName);
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 400,
+          system: systemPrompt,
+          messages: history
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || 'Error ' + res.status);
+      }
+
+      const data = await res.json();
+      const reply = data.content?.[0]?.text || 'Lo siento, inténtalo de nuevo.';
+
+      removeTyping();
+      addMsg(reply, false);
+      history.push({ role: 'assistant', content: reply });
+
+      if (reply.includes('[ESCALADO]'))
+        logEvent('⚠ Escalado al dueño — Carmen recibirá aviso', 'badge-escalado');
+      else if (reply.includes('[CITA_CONFIRMADA]'))
+        logEvent('✓ Cita confirmada — se crearía evento en Calendar', 'badge-cita');
+      else if (reply.includes('[CITA_CANCELADA]'))
+        logEvent('✗ Cita cancelada — se eliminaría de Calendar', 'badge-cancel');
+
+      setStatus('IA activa', false);
+
+    } catch(e) {
+      removeTyping();
+      addMsg('Lo siento, ha habido un error: ' + e.message, false);
+      setStatus('Error: ' + e.message, false, true);
+    }
+
+    busy = false;
+  }
+
+  function resetChat() {
+    history = [];
+    document.getElementById('event-log').innerHTML = '';
+    const body = document.getElementById('chat-body');
+    body.innerHTML = '<div class="date-divider">Hoy</div>' +
+      '<div class="msg msg-in">¡Hola! Soy el asistente virtual de <span class="salon-ref">' +
+      escapeHtml(salonName) + '</span>. ¿En qué te puedo ayudar? 😊<div class="msg-time">' +
+      getTime() + '</div></div>';
+    setStatus(apiKey ? 'IA activa — conversación reiniciada' : 'Introduce tu API Key para activar la IA', false);
+  }
+
+  document.getElementById('user-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  });
+</script>
+</body>
+</html>
